@@ -1,6 +1,10 @@
 # Receipt Parser
 
-Local Streamlit dashboard: upload receipt images/PDFs, extract vendor, date, total and line items, then see spend and purchase counts per vendor.
+Local Streamlit dashboard:
+- upload receipt images/PDF
+- extract vendor, date, total and line items
+- see spend and purchase counts per vendor
+- graphs spending totals
 
 ## Setup
 
@@ -14,7 +18,7 @@ streamlit run app.py
 ```
 
 ## Notes
-- Tesseract engine is fully local; parsing uses regex heuristics (vendor = first line, total = "Total" line).
-- GPT-4o engine is more accurate on messy receipts but sends images to OpenAI.
-- Table cells are editable, so you can fix OCR mistakes and the vendor summary updates.
-- Vendor categories come from keyword matching in `CATEGORY_KEYWORDS`; extend it as needed.
+- Tesseract engine is fully local; parsing uses regex heuristics to locate information from certain syntax (vendor = first line, total = "Total" line)
+- GPT-4o engine is more accurate on more messy receipts but sends images to OpenAI, requiring tokens
+ 
+- Vendor categories come from keyword matching in `CATEGORY_KEYWORDS`; can be edited to account for new companies
