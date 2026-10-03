@@ -10,7 +10,7 @@ Local Streamlit dashboard:
 
 ```bash
  pip install streamlit pandas pillow pytesseract pdf2image openai
-export OPENAI_API_KEY=sk-...   # optional, only for the GPT-4o engine
+export OPENAI_API_KEY=...   #only for the GPT-4o engine
 streamlit run app.py
 ```
 
