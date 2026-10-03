@@ -10,9 +10,6 @@ Local Streamlit dashboard:
 
 ```bash
  pip install streamlit pandas pillow pytesseract pdf2image openai
-# System dependencies
-#   macOS:  brew install tesseract poppler
-#   Ubuntu: sudo apt install tesseract-ocr poppler-utils
 export OPENAI_API_KEY=sk-...   # optional, only for the GPT-4o engine
 streamlit run app.py
 ```
