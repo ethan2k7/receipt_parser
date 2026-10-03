@@ -1,4 +1,4 @@
-"""Receipt Parser: upload receipts (image/PDF), extract fields, summarize by vendor.
+"""Receipt Parser: upload receipts (image/PDF), extract vendor and sale data
 
 Run:  streamlit run app.py
 Engines:
@@ -18,6 +18,7 @@ from PIL import Image
 
 st.set_page_config(page_title="Receipt Parser", layout="wide")
 
+#sample vendor names under certain categories
 CATEGORY_KEYWORDS = {
     "Groceries": ["safeway", "trader joe", "whole foods", "costco", "walmart", "target", "grocery", "market"],
     "Dining": ["cafe", "coffee", "starbucks", "restaurant", "grill", "pizza", "burger", "bar", "kitchen"],
@@ -47,7 +48,8 @@ def guess_category(vendor: str) -> str:
 
 
 # Known brands: regex pattern -> canonical name. Searched across the WHOLE receipt text,
-# so "survey.walmart.com" still resolves to "Walmart". Add your own stores here.
+# so links like "survey.walmart.com" still reads to "Walmart"
+# more stores can be added
 KNOWN_VENDORS = {
     r"wal[\s-]?mart": "Walmart",
     r"\btarget\b": "Target",
@@ -64,7 +66,8 @@ KNOWN_VENDORS = {
     r"\bikea\b": "IKEA",
 }
 
-# Lines that are never a vendor name (survey blurbs, URLs, addresses, phone numbers...)
+# Lines that are never a vendor name (survey links, addresses, phone numbers)
+# Allows for quicker search for important data
 JUNK_LINE = re.compile(
     r"feedback|survey|www\.|https?:|\.com|\.net|@|thank|welcome|receipt|"
     r"store\s*#|st#|tel|phone|\d{3}[-.\s]\d{3,4}[-.\s]\d{4}|manager|cashier",
@@ -75,7 +78,7 @@ JUNK_LINE = re.compile(
 def normalize_vendor(raw_vendor, text: str = "", lines=None) -> str:
     """Return a clean vendor name: known brand anywhere in text, else first non-junk line."""
     haystack = f"{raw_vendor or ''}\n{text or ''}"
-    best = None  # (position, name): earliest known-brand mention wins
+    best = None  # (position, name): takes the first vendor name possible and assigns it to the receipt
     for pattern, name in KNOWN_VENDORS.items():
         m = re.search(pattern, haystack, re.I)
         if m and (best is None or m.start() < best[0]):
@@ -88,11 +91,11 @@ def normalize_vendor(raw_vendor, text: str = "", lines=None) -> str:
         l = l.strip()
         if len(l) < 3 or JUNK_LINE.search(l) or sum(c.isdigit() for c in l) > len(l) / 2:
             continue
-        l = re.sub(r"[#\s]*\d+$", "", l)  # strip trailing store numbers ("SAFEWAY #1234")
+        l = re.sub(r"[#\s]*\d+$", "", l)  # cuts off store numbers ("7-Eleven #1234")
         return l.strip(" -*#").title() or "Unknown"
     return "Unknown"
 
-
+# turns cost values into floats
 def to_float(s):
     try:
         return float(str(s).replace(",", "").replace("$", "").strip())
@@ -100,7 +103,7 @@ def to_float(s):
         return None
 
 
-# ---------- engine 1: Tesseract ----------
+# ---------- Tesseract ----------
 def parse_with_tesseract(img: Image.Image) -> dict:
     import pytesseract
 
@@ -127,7 +130,7 @@ def parse_with_tesseract(img: Image.Image) -> dict:
             if nums:
                 total = to_float(nums[-1])
                 break
-    if total is None:  # fall back to largest amount on the receipt
+    if total is None:  # fall back to largest amount on the receipt, 
         amounts = [to_float(n) for n in re.findall(r"\d+\.\d{2}", text)]
         total = max([a for a in amounts if a is not None], default=None)
 
@@ -140,7 +143,7 @@ def parse_with_tesseract(img: Image.Image) -> dict:
     return {"vendor": vendor, "date": date, "total": total, "items": items, "raw_text": text}
 
 
-# ---------- engine 2: OpenAI vision ----------
+# ---------- Open AI GPT ----------
 def parse_with_openai(img: Image.Image) -> dict:
     from openai import OpenAI
 
